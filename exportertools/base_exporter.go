@@ -89,12 +89,12 @@ func (e *BaseExporter) Setup() error {
 
 // Satisfies Exporter interface and calls GenericDescribe which works with cache
 func (e *BaseExporter) Describe(ch chan<- *prometheus.Desc) {
-	GenericDescribe(e, ch)
+    GenericDescribe(e, ch)
 }
 
 // Satisfies Exporter interface and calls GenericCollect which works with cache
 func (e *BaseExporter) Collect(ch chan<- prometheus.Metric) {
-	GenericCollect(e, ch)
+    GenericCollect(e, ch)
 }
 
 func broadcastMessage(msg bool, channels []chan bool) {
