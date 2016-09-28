@@ -135,10 +135,10 @@ func (d *Dispatcher) Register(item *ServiceAtomic, exporter Exporter) {
 
 // Unregister service in Dispatcher
 func (d *Dispatcher) Unregister(item *ServiceAtomic) {
+    h := hex.EncodeToString(hash.Md5(item, 1))
+
     d.mtx.Lock()
     defer d.mtx.Unlock()
-
-    h := hex.EncodeToString(hash.Md5(item, 1))
     delete(d.Services, h)
     delete(d.Exporters, h)
 }
