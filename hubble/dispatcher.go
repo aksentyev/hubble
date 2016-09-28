@@ -66,8 +66,8 @@ func (h *Hubble) NewDispatcher(ttl int, cb func() ([]*ServiceAtomic, error)) *Di
         TTL:          time.Duration(ttl) * time.Second,
         Services:     map[string]*ServiceAtomic{},
         Exporters:    map[string]Exporter{},
-        ToRegister:   make(chan *ServiceAtomic),
-        ToUnregister: make(chan map[string]*ServiceAtomic),
+        ToRegister:   make(chan *ServiceAtomic, 20),
+        ToUnregister: make(chan map[string]*ServiceAtomic, 20),
         mtx:          &sync.Mutex{},
     }
 
@@ -113,7 +113,7 @@ func (d *Dispatcher) run(f func() ([]*ServiceAtomic, error)) {
 
             for h, svc := range actual {
                 if _, ok := d.Services[h]; !ok {
-                    go func(s *ServiceAtomic) { d.ToRegister <- s }(svc)
+                    d.ToRegister <- svc
                 }
                 delete(toBeRemoved, h)
             }

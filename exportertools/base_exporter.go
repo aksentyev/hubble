@@ -20,7 +20,7 @@ type BaseExporter struct {
 
 func NewBaseExporter(name string, ttl int, labels map[string]string) *BaseExporter {
     e := BaseExporter{
-        Control:  make(chan bool),
+        Control:  make(chan bool, 1),
         Name:     name,
         Cache:    NewCache(ttl),
         metrics:  []MetricCollector{},

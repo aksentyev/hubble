@@ -25,7 +25,6 @@ func Register(exporter Exporter) (err error) {
     err = prometheus.Register(exporter)
     if err != nil {
         return err
-        // os.Exit(2)
     }
     go exporter.Process()
     return nil
