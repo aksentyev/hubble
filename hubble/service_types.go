@@ -26,7 +26,6 @@ type ServiceAtomic struct {
     Name            string
     Address         string
     Port            string
-    modifyIndex     uint64
     ExtraLabels     map[string]string
     ExporterOptions map[string]string
 }

@@ -26,7 +26,7 @@ type Dispatcher struct {
     Exporters    map[string]Exporter
     ToRegister   chan *ServiceAtomic
     ToUnregister chan map[string]*ServiceAtomic
-    mtx          *sync.Mutex
+    *sync.RWMutex
 }
 
 /* Exporter interface is used to call Close() when Interrupt
@@ -61,21 +61,21 @@ defer in example function is important. If callback was not return an error
 Dispatcher receives empty services list. Re-register will be failed because prometheus golang client
 cannot fully unregister Collector.
 */
-func (h *Hubble) NewDispatcher(ttl int, cb func() ([]*ServiceAtomic, error)) *Dispatcher {
+func (h *Hubble) NewDispatcher(ttl int) *Dispatcher {
     d := Dispatcher{
         TTL:          time.Duration(ttl) * time.Second,
         Services:     map[string]*ServiceAtomic{},
         Exporters:    map[string]Exporter{},
         ToRegister:   make(chan *ServiceAtomic, 20),
         ToUnregister: make(chan map[string]*ServiceAtomic, 20),
-        mtx:          &sync.Mutex{},
+        RWMutex:      &sync.RWMutex{},
     }
 
-    go d.run(cb)
     return &d
 }
 
-func (d *Dispatcher) run(f func() ([]*ServiceAtomic, error)) {
+// Run Dispatcher
+func (d *Dispatcher) Run(f func() ([]*ServiceAtomic, error)) {
     ticker := time.NewTicker(d.TTL)
 
     // Gracefully exit on Interrupt
@@ -94,41 +94,51 @@ func (d *Dispatcher) run(f func() ([]*ServiceAtomic, error)) {
     }()
 
     for _ = range ticker.C {
-        func() {
-            list, err := f()
-            if err != nil {
-                return
-            }
+        d.process(f)
+    }
+}
 
-            actual := map[string]*ServiceAtomic{}
-            for _, svc := range list {
-                h := hex.EncodeToString(hash.Md5(svc, 1))
-                actual[h] = svc
-            }
+func (d *Dispatcher) process( f func() ([]*ServiceAtomic, error) ) {
+    list, err := f()
+    if err != nil {
+        return
+    }
 
-            toBeRemoved := map[string]*ServiceAtomic{}
-            for k, v := range d.Services {
-                toBeRemoved[k] = v
-            }
+    actual := map[string]*ServiceAtomic{}
+    for _, svc := range list {
+        h := hex.EncodeToString(hash.Md5(svc, 1))
+        actual[h] = svc
+    }
 
-            for h, svc := range actual {
-                if _, ok := d.Services[h]; !ok {
-                    d.ToRegister <- svc
-                }
-                delete(toBeRemoved, h)
-            }
-            for h, svc := range toBeRemoved {
-                d.ToUnregister <- map[string]*ServiceAtomic{h: svc}
-            }
-        }()
+    toBeRemoved := map[string]*ServiceAtomic{}
+    d.RLock()
+    for k, v := range d.Services {
+        toBeRemoved[k] = v
+    }
+    d.RUnlock()
+
+    for h, svc := range actual {
+        d.RLock()
+        _, ok := d.Services[h]
+        d.RUnlock()
+
+        if !ok {
+            d.ToRegister <- svc
+        }
+        delete(toBeRemoved, h)
+    }
+
+    for h, svc := range toBeRemoved {
+        d.ToUnregister <- map[string]*ServiceAtomic{h: svc}
     }
 }
 
 // Register service and exporter pair in Dispatcher
 func (d *Dispatcher) Register(item *ServiceAtomic, exporter Exporter) {
-    d.mtx.Lock()
-    defer d.mtx.Unlock()
     h := hex.EncodeToString(hash.Md5(item, 1))
+
+    d.Lock()
+    defer d.Unlock()
     d.Services[h] = item
     d.Exporters[h] = exporter
 }
@@ -137,16 +147,16 @@ func (d *Dispatcher) Register(item *ServiceAtomic, exporter Exporter) {
 func (d *Dispatcher) Unregister(item *ServiceAtomic) {
     h := hex.EncodeToString(hash.Md5(item, 1))
 
-    d.mtx.Lock()
-    defer d.mtx.Unlock()
+    d.Lock()
+    defer d.Unlock()
     delete(d.Services, h)
     delete(d.Exporters, h)
 }
 
 // Unregister service in Dispatcher with only hash identificator provided
 func (d *Dispatcher) UnregisterWithHash(h string) {
-    d.mtx.Lock()
-    defer d.mtx.Unlock()
+    d.Lock()
+    defer d.Unlock()
 
     delete(d.Services, h)
     delete(d.Exporters, h)

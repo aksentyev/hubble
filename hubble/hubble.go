@@ -49,14 +49,14 @@ example:
 func (h *Hubble) Services(filter func(list []*Service) []*Service) []*Service {
     log.Debugf("Getting service from backend")
     allServices := h.getServices()
-    log.Debugf("Got them! %v\n", names(allServices))
+    log.Debugf("Service list %v\n", names(allServices))
 
     servicesForMonitoring := filter(allServices)
 
     log.Debugf("Getting service params from backend")
 
     h.getParams(servicesForMonitoring)
-    log.Debugf("Got them! Services, with defined params were found: %v\n", notDefaultParams(servicesForMonitoring))
+    log.Debugf("Services, with defined params were found: %v\n", notDefaultParams(servicesForMonitoring))
     return servicesForMonitoring
 }
 

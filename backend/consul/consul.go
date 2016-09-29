@@ -29,48 +29,52 @@ func NewKV(consul *Consul) *ConsulKV {
 
 // Return Services list
 func (c *Consul) GetAll() []*hubble.Service {
-    var (
-        wg sync.WaitGroup
-        mutex sync.Mutex
-    )
+    var wg sync.WaitGroup
     threads := make(chan bool, 10)
+    servicesCh := make(chan *hubble.Service)
 
     list, err := c.getList()
     if err != nil {
         log.Errorf("Consul. Get services list failed: %+v", err)
     }
-    services := []*hubble.Service{}
-    defer close(threads)
 
     wg.Add(len(list))
 
     go func() {
+        defer close(threads)
+        defer close(servicesCh)
         for _, name := range list {
             threads<- true
-            go func(name string) {
-                defer func() { <-threads }()
-                defer wg.Done()
-                defer mutex.Unlock()
-
-                svc := hubble.DefaultService()
-                svc.Name = name
-
-                err := c.get(svc)
-                if err != nil {
-                    log.Errorf("Consul: Get svc %v failed", svc.Name)
-                }
-                mutex.Lock()
-                services = append(services, svc)
-            }(name)
+            go c.getService(servicesCh, threads, &wg, name)
         }
+        wg.Wait()
     }()
 
-    wg.Wait()
+    services := []*hubble.Service{}
+    for svc := range servicesCh {
+        services = append(services, svc)
+    }
+    log.Debugf("All services were fetched")
+
     return services
 }
 
+func (c *Consul) getService(servicesCh chan *hubble.Service, threads chan bool, wg *sync.WaitGroup, name string) {
+    defer func() { <-threads }()
+    defer wg.Done()
 
-func (c *Consul) get(svc *hubble.Service) (err error) {
+    svc, err := c.fetch(name)
+    if err != nil {
+        log.Errorf("Consul: Get svc %v failed", svc.Name)
+    }
+    servicesCh<- svc
+}
+
+
+func (c *Consul) fetch(name string) (svc *hubble.Service, err error) {
+    svc = hubble.DefaultService()
+    svc.Name = name
+
     res, _, err := c.Catalog().Service(svc.Name, "", nil)
 
     for _, s := range res {
@@ -83,7 +87,7 @@ func (c *Consul) get(svc *hubble.Service) (err error) {
         svc.Tags = s.ServiceTags
         svc.ModifyIndex = s.ModifyIndex
     }
-    return err
+    return svc, err
 }
 
 func (c *Consul) getList() (list []string, err error) {
