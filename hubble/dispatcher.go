@@ -40,22 +40,20 @@ type Exporter interface {
 NewDispatcher receives TTL and callback function that should return []*ServiceAtomic.
 Example:
     cb := func() (list []*hubble.ServiceAtomic, err error) {
-        defer func() {
-            if r := recover(); r != nil {
-                err = errors.New(fmt.Sprintf("Unable to get services from consul: %v", r))
-                list = []*hubble.ServiceAtomic{}
-                log.Errorln(err)
-            }
-        }()
-
-        for _, svc := range h.Services(filterCB){
+        services, err := h.Services(filterCB)
+        if err != nil {
+            return list, err
+        }
+        for _, svc := range services {
             for _, el := range svc.MakeAtomic(nil) {
                 list = append(list, el)
             }
         }
         return list, err
     }
-    c = h.NewDispatcher(60, callback)
+
+    d := h.NewDispatcher(60, callback)
+    d.Run()
 
 defer in example function is important. If callback was not return an error
 Dispatcher receives empty services list. Re-register will be failed because prometheus golang client

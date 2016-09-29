@@ -18,7 +18,7 @@ type Hubble struct {
 
 // BackendAdapter implements GetAll() method
 type BackendAdapter interface {
-    GetAll() []*Service
+    GetAll() ([]*Service, error)
 }
 
 // KVBackendAdapter implements GetParams() method should fill ServiceParams part of Service with data
@@ -46,57 +46,72 @@ example:
         return servicesForMonitoring
     }
 */
-func (h *Hubble) Services(filter func(list []*Service) []*Service) []*Service {
+func (h *Hubble) Services(filter func(list []*Service) []*Service) ([]*Service, error) {
+    var servicesForMonitoring []*Service
+
     log.Debugf("Getting service from backend")
-    allServices := h.getServices()
-    log.Debugf("Service list %v\n", names(allServices))
+    allServices, err := h.getServices()
+    if err == nil {
+        log.Debugf("Service list %v\n", names(allServices))
+        servicesForMonitoring = filter(allServices)
 
-    servicesForMonitoring := filter(allServices)
+        log.Debugf("Getting service params from backend")
+        err = h.getParams(servicesForMonitoring)
 
-    log.Debugf("Getting service params from backend")
+        if err == nil {
+            log.Debugf("Services, with defined params were found: %v\n", notDefaultParams(servicesForMonitoring))
+        }
+    }
 
-    h.getParams(servicesForMonitoring)
-    log.Debugf("Services, with defined params were found: %v\n", notDefaultParams(servicesForMonitoring))
-    return servicesForMonitoring
+    return servicesForMonitoring, err
 }
 
-func (h *Hubble) getServices() []*Service {
+func (h *Hubble) getServices() ([]*Service, error) {
     var i BackendAdapter = h.SvcBackend
     return i.GetAll()
 }
 
-func (h *Hubble) getParams(list []*Service) {
+func (h *Hubble) getParams(list []*Service) (err error) {
     var i KVBackendAdapter = h.ParamsBackend
     var wg sync.WaitGroup
     threads := make(chan bool, 10)
-    defer close(threads)
+    errCh := make(chan error)
 
     wg.Add(len(list))
 
-    for _, svc := range list {
-        threads<- true
-        go func(svc *Service) {
-            defer func() { <-threads }()
-            defer wg.Done()
+    go func() {
+        defer close(threads)
+        defer close(errCh)
+        
+        for _, svc := range list {
+            threads<- true
+            go func(svc *Service) {
+                defer func() { <-threads }()
+                defer wg.Done()
 
-            params, err := func(svc *Service) (*ServiceParams, error) {
-                key := fmt.Sprintf("monitoring/%v/%v", strings.ToLower(svc.Name), strings.ToLower(h.exporterName))
-                params, err := i.GetParams(key)
+                params, err := func(svc *Service) (*ServiceParams, error) {
+                    key := fmt.Sprintf("monitoring/%v/%v", strings.ToLower(svc.Name), strings.ToLower(h.exporterName))
+                    params, err := i.GetParams(key)
+                    if err != nil {
+                        err = errors.New(fmt.Sprintf("Get params for svc %v was failed: %v", svc.Name, err))
+                        return &ServiceParams{}, err
+                    }
+                    return params, nil
+                }(svc)
+
                 if err != nil {
-                    err = errors.New(fmt.Sprintf("Get params for svc %v was failed: %v", svc.Name, err))
-                    return &ServiceParams{}, err
+                    log.Errorln(err)
+                    errCh <- err
+                    return
                 }
-                return params, nil
+                svc.ServiceParams = params
             }(svc)
+        }
+        wg.Wait()
+    }()
 
-            if err != nil {
-                log.Errorln(err)
-                return
-            }
-            svc.ServiceParams = params
-        }(svc)
-    }
-    wg.Wait()
+    err = <- errCh
+    return err
 }
 
 func names(services []*Service) (list []string) {

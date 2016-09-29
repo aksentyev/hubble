@@ -28,14 +28,16 @@ func NewKV(consul *Consul) *ConsulKV {
 }
 
 // Return Services list
-func (c *Consul) GetAll() []*hubble.Service {
+func (c *Consul) GetAll() (services []*hubble.Service, err error) {
     var wg sync.WaitGroup
     threads := make(chan bool, 10)
     servicesCh := make(chan *hubble.Service)
+    errCh := make(chan error)
 
     list, err := c.getList()
     if err != nil {
         log.Errorf("Consul. Get services list failed: %+v", err)
+        return services, err
     }
 
     wg.Add(len(list))
@@ -45,26 +47,32 @@ func (c *Consul) GetAll() []*hubble.Service {
         defer close(servicesCh)
         for _, name := range list {
             threads<- true
-            go c.getService(servicesCh, threads, &wg, name)
+            go c.getService(servicesCh, threads, errCh, &wg, name)
         }
         wg.Wait()
     }()
 
-    services := []*hubble.Service{}
-    for svc := range servicesCh {
-        services = append(services, svc)
+    select {
+    case err = <-errCh:
+        close(errCh)
+        return services, err
+    default:
+        for svc := range servicesCh {
+            services = append(services, svc)
+        }
     }
     log.Debugf("All services were fetched")
 
-    return services
+    return services, err
 }
 
-func (c *Consul) getService(servicesCh chan *hubble.Service, threads chan bool, wg *sync.WaitGroup, name string) {
+func (c *Consul) getService(servicesCh chan *hubble.Service, threads chan bool, errCh chan error, wg *sync.WaitGroup, name string) {
     defer func() { <-threads }()
     defer wg.Done()
 
     svc, err := c.fetch(name)
     if err != nil {
+        errCh <- err
         log.Errorf("Consul: Get svc %v failed", svc.Name)
     }
     servicesCh<- svc
@@ -95,6 +103,7 @@ func (c *Consul) getList() (list []string, err error) {
     for k, _ := range res {
         list = append(list, k)
     }
+
     return list, err
 }
 
@@ -107,5 +116,6 @@ func (c *ConsulKV) GetParams(key string) (p *hubble.ServiceParams, err error) {
         err = json.Unmarshal(res.Value, p)
         p.ModifyIndex = res.ModifyIndex
     }
+
     return p, err
 }
