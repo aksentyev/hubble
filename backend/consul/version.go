@@ -1,4 +1,4 @@
 package consul
 
 // Version
-const VERSION string = "0.1"
+const VERSION string = "0.2"
