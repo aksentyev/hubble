@@ -11,7 +11,7 @@ type Metric struct {
     Name        string
     Description string
     Type        MetricType
-    Value       int64
+    Value       float64
     Labels      map[string]string
 }
 
@@ -58,8 +58,4 @@ func StringToType(s string) MetricType {
         log.Errorf("Undefined metric type: %v", s)
         return Untyped
     }
-}
-
-func (m *Metric) PromValue() float64 {
-    return float64(m.Value)
 }
