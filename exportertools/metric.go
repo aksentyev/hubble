@@ -7,6 +7,7 @@ import (
     "strings"
     "math"
     "strconv"
+    "time"
 )
 
 type Metric struct {
