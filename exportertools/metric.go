@@ -51,29 +51,29 @@ func (m *Metric) PromType() prometheus.ValueType {
 func (m *Metric) PromValue() float64 {
     switch v := m.Value.(type) {
     case int64:
-        return float64(v), true
+        return float64(v)
     case float64:
-        return v, true
+        return v
     case time.Time:
-        return float64(v.Unix()), true
+        return float64(v.Unix())
     case []byte:
         // Try and convert to string and then parse to a float64
         strV := string(v)
         result, err := strconv.ParseFloat(strV, 64)
         if err != nil {
-            return math.NaN(), false
+            return math.NaN()
         }
-        return result, true
+        return result
     case string:
         result, err := strconv.ParseFloat(v, 64)
         if err != nil {
-            return math.NaN(), false
+            return math.NaN()
         }
-        return result, true
+        return result
     case nil:
-        return math.NaN(), true
+        return math.NaN()
     default:
-        return math.NaN(), false
+        return math.NaN()
     }
 }
 
