@@ -42,7 +42,7 @@ func GenericCollect(be *BaseExporter, ch chan<- prometheus.Metric) {
             metric, err := prometheus.NewConstMetric(
                 m.PromDescription(be.Name),
                 m.PromType(),
-                m.Value,
+                m.PromValue(),
             )
             if err != nil {
                 log.Errorf("Unable to send metric %v for %v to the Prometheus client due to the error: %v", name, be.Name, err)

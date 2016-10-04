@@ -5,13 +5,15 @@ import (
     "github.com/prometheus/common/log"
 
     "strings"
+    "math"
+    "strconv"
 )
 
 type Metric struct {
     Name        string
     Description string
     Type        MetricType
-    Value       float64
+    Value       interface{}
     Labels      map[string]string
 }
 
@@ -43,6 +45,35 @@ func (m *Metric) PromType() prometheus.ValueType {
         return prometheus.GaugeValue
     default:
         return prometheus.UntypedValue
+    }
+}
+
+func (m *Metric) PromValue() float64 {
+    switch v := m.Value.(type) {
+    case int64:
+        return float64(v), true
+    case float64:
+        return v, true
+    case time.Time:
+        return float64(v.Unix()), true
+    case []byte:
+        // Try and convert to string and then parse to a float64
+        strV := string(v)
+        result, err := strconv.ParseFloat(strV, 64)
+        if err != nil {
+            return math.NaN(), false
+        }
+        return result, true
+    case string:
+        result, err := strconv.ParseFloat(v, 64)
+        if err != nil {
+            return math.NaN(), false
+        }
+        return result, true
+    case nil:
+        return math.NaN(), true
+    default:
+        return math.NaN(), false
     }
 }
 
