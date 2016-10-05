@@ -67,12 +67,10 @@ func (h *Hubble) Services(filter func(list []*Service) []*Service) ([]*Service, 
 }
 
 func (h *Hubble) getServices() ([]*Service, error) {
-    var i BackendAdapter = h.SvcBackend
-    return i.GetAll()
+    return h.SvcBackend.GetAll()
 }
 
 func (h *Hubble) getParams(list []*Service) (err error) {
-    var i KVBackendAdapter = h.ParamsBackend
     var wg sync.WaitGroup
     threads := make(chan bool, 10)
     errCh := make(chan error)
@@ -82,7 +80,7 @@ func (h *Hubble) getParams(list []*Service) (err error) {
     go func() {
         defer close(threads)
         defer close(errCh)
-        
+
         for _, svc := range list {
             threads<- true
             go func(svc *Service) {
@@ -91,7 +89,7 @@ func (h *Hubble) getParams(list []*Service) (err error) {
 
                 params, err := func(svc *Service) (*ServiceParams, error) {
                     key := fmt.Sprintf("monitoring/%v/%v", strings.ToLower(svc.Name), strings.ToLower(h.exporterName))
-                    params, err := i.GetParams(key)
+                    params, err := h.ParamsBackend.GetParams(key)
                     if err != nil {
                         err = errors.New(fmt.Sprintf("Get params for svc %v was failed: %v", svc.Name, err))
                         return &ServiceParams{}, err
