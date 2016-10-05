@@ -14,7 +14,7 @@ type BaseExporter struct {
     Control chan bool
     Name    string
     Cache   *Cache
-    metrics []MetricCollector
+    MetricCollectors []MetricCollector
     Labels  map[string]string
 }
 
@@ -23,14 +23,14 @@ func NewBaseExporter(name string, ttl int, labels map[string]string) *BaseExport
         Control:  make(chan bool, 1),
         Name:     name,
         Cache:    NewCache(ttl),
-        metrics:  []MetricCollector{},
+        MetricCollectors:  []MetricCollector{},
         Labels:   labels,
     }
     return &e
 }
 
 func (e *BaseExporter) AddCollector(m MetricCollector) {
-    e.metrics = append(e.metrics, m)
+    e.MetricCollectors = append(e.MetricCollectors, m)
 }
 
 // Process runs metric collection in async mode
@@ -39,11 +39,11 @@ func (e *BaseExporter) Process() {
 
     var channels []chan bool
 
-    for _, _ = range e.metrics {
+    for _, _ = range e.MetricCollectors {
         channels = append(channels, make(chan bool))
     }
 
-    for id, mc := range e.metrics {
+    for id, mc := range e.MetricCollectors {
         log.Debugf("Started Process() for %v", e.Name)
         ticker := time.NewTicker(e.Cache.TTL)
         go func(done chan bool, m MetricCollector) {
