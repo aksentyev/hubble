@@ -52,14 +52,14 @@ Example:
         return list, err
     }
 
-    d := h.NewDispatcher(60, callback)
-    d.Run()
+    d := hubble.NewDispatcher(60)
+    d.Run(callback)
 
 defer in example function is important. If callback was not return an error
 Dispatcher receives empty services list. Re-register will be failed because prometheus golang client
 cannot fully unregister Collector.
 */
-func (h *Hubble) NewDispatcher(ttl int) *Dispatcher {
+func NewDispatcher(ttl int) *Dispatcher {
     d := Dispatcher{
         TTL:          time.Duration(ttl) * time.Second,
         Services:     map[string]*ServiceAtomic{},
