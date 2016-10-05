@@ -2,7 +2,6 @@ package exportertools_mock
 
 import "github.com/aksentyev/hubble/exportertools"
 
-// Mock of BackendAdapter interface
 type Collector struct {
 }
 
