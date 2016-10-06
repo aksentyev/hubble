@@ -4,7 +4,7 @@
 
 Hubble is the alternative service discovery for Prometheus. Consul is the only one supported backend.
 
-Example usage see in [postgres_exporter](github.com/aksentyev/postgres_exporter) code.
+Example usage see in [postgres_exporter](https://github.com/aksentyev/postgres_exporter) code.
 
 Consul KV keeps json object contains parameters could be used to automatically enable collecting metric for the service.
 
