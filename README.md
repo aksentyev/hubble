@@ -1,6 +1,6 @@
 # Hubble service discovery
 
-[![GoDoc](https://godoc.org/github.com/aksentyev/hubble?status.svg)](https://godoc.org/github.com/aksentyev/hubble)
+[![GoDoc](https://godoc.org/github.com/aksentyev/hubble?status.svg)](https://godoc.org/github.com/aksentyev/hubble) [![Build Status](https://travis-ci.org/aksentyev/hubble.svg?branch=master)](https://travis-ci.org/aksentyev/hubble)
 
 Hubble is the alternative service discovery for Prometheus. Consul is the only one supported backend.
 
