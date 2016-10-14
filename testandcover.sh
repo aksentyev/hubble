@@ -6,7 +6,7 @@ function die() {
 }
 
 # Initialize profile.cov
-echo "mode: count" > profile.cov
+echo "mode: count" > coverage.txt
 
 # Initialize error tracking
 ERROR=""
@@ -16,7 +16,7 @@ for pkg in `cat .testpackages`
 do
     #$HOME/gopath/bin/
     go test -v -covermode=count -coverprofile=profile_tmp.cov $pkg || ERROR="Error testing $pkg"
-    tail -n +2 profile_tmp.cov >> profile.cov || die "Unable to append coverage for $pkg"
+    tail -n +2 profile_tmp.cov >> coverage.txt || die "Unable to append coverage for $pkg"
 done
 
 if [ ! -z "$ERROR" ]
