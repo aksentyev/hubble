@@ -2,37 +2,24 @@ package exportertools_test
 
 import (
     . "github.com/aksentyev/hubble/exportertools"
+    mock "../mock/exportertools"
+
     . "github.com/onsi/ginkgo"
     . "github.com/onsi/gomega"
     "testing"
-    "time"
-
-    "fmt"
-
-    mock "../mock/exportertools"
 )
 
-func TestBaseExporter(t *testing.T) {
+func TestCollector(t *testing.T) {
     RegisterFailHandler(Fail)
-    RunSpecs(t, "Exportertools")
+    RunSpecs(t, "Collector")
 }
 
-var _ = Describe("Exportertools", func() {
+var _ = Describe("Collector", func() {
     defer GinkgoRecover()
 
     var be *BaseExporter
-
-    BeforeSuite(func(){
+    BeforeEach(func(){
         be = NewBaseExporter("test", 30, map[string]string{"key": "value"})
-    })
-
-    Context("BaseExporter", func() {
-        Describe("Create new BaseExporter instance", func() {
-            It("should return new instance", func(){
-                Expect(fmt.Sprintf("%T", be)).To(Equal("*exportertools.BaseExporter"))
-                Expect(be.Cache.TTL).To(Equal(30 * time.Second))
-            })
-        })
     })
 
     Describe("Collector", func() {
