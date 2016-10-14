@@ -92,11 +92,11 @@ func (d *Dispatcher) Run(f func() ([]*ServiceAtomic, error)) {
     }()
 
     for _ = range ticker.C {
-        d.process(f)
+        d.Process(f)
     }
 }
 
-func (d *Dispatcher) process( f func() ([]*ServiceAtomic, error) ) {
+func (d *Dispatcher) Process( f func() ([]*ServiceAtomic, error) ) {
     list, err := f()
     if err != nil {
         return
