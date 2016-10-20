@@ -29,6 +29,7 @@ func (s *Service) MakeAtomic(extraLabels map[string]string) []*ServiceAtomic {
             Name:        s.Name,
             Address:     s.Addresses[host],
             Port:        s.Port,
+            Tags:        s.Tags,
             ExtraLabels: map[string]string{
                 "svc": s.Name,
                 "host": host,

@@ -51,6 +51,8 @@ func (m *Metric) PromType() prometheus.ValueType {
 
 func (m *Metric) PromValue() float64 {
     switch v := m.Value.(type) {
+    case int:
+        return float64(v)
     case int64:
         return float64(v)
     case float64:
