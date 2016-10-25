@@ -31,7 +31,7 @@ func (s *Service) MakeAtomic(extraLabels map[string]string) []*ServiceAtomic {
             Port:        s.Port,
             Tags:        s.Tags,
             ExtraLabels: map[string]string{
-                "svc": s.Name,
+                "service": s.Name,
                 "host": host,
                 "notifiable": strconv.FormatBool(s.Notifiable),
                 "modify_index": strconv.FormatUint(s.ModifyIndex + s.ServiceParams.ModifyIndex, 10),
