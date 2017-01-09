@@ -1,7 +1,7 @@
 package consul
 
 import (
-    "github.com/aksentyev/consul/api"
+    "github.com/hashicorp/consul/api"
 )
 
 type Consul struct {
